@@ -49,7 +49,7 @@ func main() {
 
 		f, err := os.Stat(path)
 
-		if err == nil {
+		if err == nil && !f.IsDir() {
 			filenodes = append(filenodes, FilePath{f.ModTime(), path})
 		}
 	}
