@@ -6,6 +6,7 @@ import (
 	"time"
 	"github.com/kr/fs"
 	"fmt"
+	"sort"
 )
 
 
@@ -17,9 +18,17 @@ type FilePath struct {
 
 type ByMTime []FilePath
 
-func (a ByMTime) Len() { return len(a) }
-func (a ByMTime) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-func (a ByMTime) Less(i, j int) bool { return a[i].MTime.Before(a[j].MTime) }
+func (a ByMTime) Len() int {
+	return len(a)
+}
+
+func (a ByMTime) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+
+func (a ByMTime) Less(i, j int) bool {
+	return a[i].MTime.Before(a[j].MTime)
+}
 
 
 func main() {
@@ -28,12 +37,25 @@ func main() {
 	if root == "" {
 		root = "."
 	}
-	filenodes := make([]FilePath, 0)
+	filenodes := make(ByMTime, 0)
 
 	walker := fs.Walk(root)
 	for walker.Step() {
-		filenodes = append(filenodes, FilePath{f.ModTime(), path})
-	}
+		if err := walker.Err(); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			continue
+		}
+		path := walker.Path()
 
-	fmt.Println(filenodes)
+		f, err := os.Stat(path)
+
+		if err == nil {
+			filenodes = append(filenodes, FilePath{f.ModTime(), path})
+		}
+	}
+	sort.Sort(sort.Reverse(filenodes))
+
+	for _, node := range filenodes {
+		fmt.Printf("[%s] %s\n", node.MTime, node.Path)
+	}
 }
